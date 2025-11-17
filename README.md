@@ -300,19 +300,6 @@ arXiv preprint arXiv:2508.10501, 2025
       url={https://arxiv.org/abs/2508.10501}, 
 }
 ```
-
----
-
-## 👥 Authors
-
-- **Yushi Feng** - *The University of Hong Kong*
-- **Junye Du** - *The University of Hong Kong*
-- **Yingying Hong** - *The University of Hong Kong*
-- **Qifan Wang** - *The University of Hong Kong*
-- **Lequan Yu** - *The University of Hong Kong*
-
----
-
 ## 📄 License
 
 This project is released under the MIT License. See [LICENSE](LICENSE) for details.
