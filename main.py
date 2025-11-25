@@ -1,284 +1,216 @@
-import os
-import warnings
-from typing import *
-from dotenv import load_dotenv
-from transformers import logging
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-from langgraph.checkpoint.memory import MemorySaver
-from langchain_openai import ChatOpenAI
-
-from interface import create_demo
-from medrax.agent import *
-from medrax.tools import *
-from medrax.utils import *
-from medrax.maas.workflow import MaaSWorkflow  # 导入MaaS工作流
-from medrax.maas.controller import MultiLayerController
-from medrax.maas.utils import get_operator_embeddings
-from medrax.maas.operators import get_operator_descriptions
-
-warnings.filterwarnings("ignore")
-logging.set_verbosity_error()
-_ = load_dotenv()
+import sys
+import argparse
+import asyncio
+from pathlib import Path
 
 
-def initialize_agent(
-    prompt_file,
-    tools_to_use=None,
-    model_dir="model-weights",
-    temp_dir="temp",
-    device="cuda",
-    model="gpt-4o",
-    temperature=0.7,
-    top_p=0.95,
-    openai_kwargs={},
-    use_maas=True,
-    maas_checkpoint=None 
-):
-    """Initialize the agent with specified tools and configuration."""
-    prompts = load_prompts_from_file(prompt_file)
-    prompt = prompts["MEDICAL_ASSISTANT"]
-
-    all_tools = {
-        "ChestXRayClassifierTool": lambda: ChestXRayClassifierTool(device=device),
-        "ChestXRaySegmentationTool": lambda: ChestXRaySegmentationTool(device=device),
-        "LlavaMedTool": lambda: LlavaMedTool(cache_dir=model_dir, device=device, load_in_8bit=True),
-        "XRayVQATool": lambda: XRayVQATool(cache_dir=model_dir, device=device),
-        "ChestXRayReportGeneratorTool": lambda: ChestXRayReportGeneratorTool(
-            cache_dir=model_dir, device=device
-        ),
-        "XRayPhraseGroundingTool": lambda: XRayPhraseGroundingTool(
-            cache_dir=model_dir, temp_dir=temp_dir, load_in_8bit=True, device=device
-        ),
-        "ChestXRayGeneratorTool": lambda: ChestXRayGeneratorTool(
-            model_path=f"{model_dir}/roentgen", temp_dir=temp_dir, device=device
-        ),
-        "ImageVisualizerTool": lambda: ImageVisualizerTool(),
-        "DicomProcessorTool": lambda: DicomProcessorTool(temp_dir=temp_dir),
-    }
-
-    # initialization
-    tools_dict = {}
-    tools_to_use = tools_to_use or all_tools.keys()
-    for tool_name in tools_to_use:
-        if tool_name in all_tools:
-            tools_dict[tool_name] = all_tools[tool_name]()
-
-    llm = ChatOpenAI(model=model, temperature=temperature, top_p=top_p, **openai_kwargs)
-    
-    if use_maas:
-        controller = MultiLayerController(device=device)
-        if maas_checkpoint and os.path.exists(maas_checkpoint):
-            checkpoint = torch.load(maas_checkpoint, map_location=device)
-            controller.load_state_dict(checkpoint['controller_state_dict'])
-            print(f"Loaded MaaS controller from {maas_checkpoint}")
-        
-        # MaaS
-        workflow = MaaSWorkflow(
-            model=llm,
-            tools_dict=tools_dict,
-            controller=controller,
-            system_prompt=prompt,
-            log_tools=True,
-            log_dir="logs",
-            device=device
-        )
-        
-        print("MaaS Agent initialized")
-        return workflow, tools_dict
-    else:
-        checkpointer = MemorySaver()
-        agent = Agent(
-            llm,
-            tools=list(tools_dict.values()),
-            log_tools=True,
-            log_dir="logs",
-            system_prompt=prompt,
-            checkpointer=checkpointer,
-        )
-        
-        print("Agent initialized")
-        return agent, tools_dict
-
-
-if __name__ == "__main__":
-    """Main entry point for the application."""
-    print("Starting server...")
-
-    # tool selection
-    selected_tools = [
-        "ImageVisualizerTool",
-        "DicomProcessorTool",
-        "ChestXRayClassifierTool",
-        "ChestXRaySegmentationTool",
-        "ChestXRayReportGeneratorTool",
-        "XRayVQATool",
-        # "LlavaMedTool",
-        # "XRayPhraseGroundingTool",
-        # "ChestXRayGeneratorTool",
-    ]
-
-    openai_kwargs = {}
-    if api_key := os.getenv("OPENAI_API_KEY"):
-        openai_kwargs["api_key"] = api_key
-
-    if base_url := os.getenv("OPENAI_BASE_URL"):
-        openai_kwargs["base_url"] = base_url
-
-    agent, tools_dict = initialize_agent(
-        "medrax/docs/system_prompts.txt",
-        tools_to_use=selected_tools,
-        model_dir="model-weights",
-        temp_dir="temp",
-        device="cuda",
-        model="gpt-4o",
-        temperature=0.7,
-        top_p=0.95,
-        openai_kwargs=openai_kwargs,
-        use_maas=True, 
-        maas_checkpoint=None  
+def main():
+    parser = argparse.ArgumentParser(
+        description="PASS - Progressive Agent System",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Train the agent
+  python main.py train --data_root data --train_split train.json --epochs 5
+  
+  # Evaluate the agent
+  python main.py evaluate --checkpoint outputs/best_model.pth --eval_split test.json
+  
+  # Quick evaluation with limited samples
+  python main.py evaluate --checkpoint outputs/model.pth --max_samples 100
+        """
     )
     
-    demo = create_demo(agent, tools_dict)
+    subparsers = parser.add_subparsers(dest='command', help='Command to execute')
+    
+    train_parser = subparsers.add_parser('train', help='Train the agent')
+    
+    # Data arguments
+    train_parser.add_argument("--data_root", type=str, default="data", 
+                            help="Root directory of the dataset")
+    train_parser.add_argument("--train_split", type=str, default="new_train.json", 
+                            help="Training set filename")
+    train_parser.add_argument("--val_split", type=str, default="new_validate.json", 
+                            help="Validation set filename")
+    train_parser.add_argument("--output_dir", type=str, default="./outputs/train_agent", 
+                            help="Output directory")
+    
+    # Training arguments
+    train_parser.add_argument("--epochs", type=int, default=1, 
+                            help="Number of training epochs")
+    train_parser.add_argument("--batch_size", type=int, default=48, 
+                            help="Batch size for training")
+    train_parser.add_argument("--learning_rate", type=float, default=5e-5, 
+                            help="Learning rate")
+    train_parser.add_argument("--cost_weight", type=float, default=0.0003, 
+                            help="Weight of cost in utility function")
+    
+    # Warm-up arguments
+    train_parser.add_argument("--warmup_size", type=int, default=500, 
+                            help="Number of samples for supervised warm-up")
+    train_parser.add_argument("--warmup_epochs", type=int, default=3, 
+                            help="Number of epochs for supervised warm-up")
+    train_parser.add_argument("--disable_warmup", action='store_true', 
+                            help="Disable supervised warm-up phase")
+    
+    # Contrastive Path Ranking arguments
+    train_parser.add_argument("--cpr_epochs", type=int, default=2, 
+                            help="Number of epochs for Contrastive Path Ranking")
+    train_parser.add_argument("--cpr_lr", type=float, default=1e-5, 
+                            help="Learning rate for CPR phase")
+    
+    # Controller arguments
+    train_parser.add_argument("--controller_hidden_dim", type=int, default=32, 
+                            help="Controller hidden layer dimension")
+    train_parser.add_argument("--controller_num_layers", type=int, default=4, 
+                            help="Number of controller layers")
+    train_parser.add_argument("--encoder_model", type=str, 
+                            default="sentence-transformers/all-MiniLM-L6-v2",
+                            help="Sentence encoder model")
+    
+    # Device arguments
+    train_parser.add_argument("--device", type=str, default="cuda", 
+                            help="Training device (cuda or cpu)")
+    train_parser.add_argument("--use_multi_gpu", action='store_true', 
+                            help="Use multi-GPU parallel training")
+    train_parser.add_argument("--gpu_ids", type=str, default=None, 
+                            help="GPU IDs to use, comma-separated (e.g., 0,1,2)")
+    train_parser.add_argument("--distributed_tools", action='store_true', 
+                            help="Distribute tools to different GPUs")
+    train_parser.add_argument("--offload_large_tools", action='store_true', 
+                            help="Offload large tools to other GPUs")
+    train_parser.add_argument("--large_tool_threshold", type=float, default=4.0, 
+                            help="VRAM threshold (GB) for large tools")
+    
+    # Logging and checkpointing
+    train_parser.add_argument("--log_tools", action='store_true', 
+                            help="Log tool executions")
+    train_parser.add_argument("--log_dir", type=str, default="logs/agent_train", 
+                            help="Directory for logs")
+    train_parser.add_argument("--checkpoint_to_load", type=str, default=None,
+                            help="Path to checkpoint to resume training from")
+    train_parser.add_argument("--eval_every_n_epochs", type=int, default=1, 
+                            help="Evaluate every N epochs")
+    train_parser.add_argument("--save_every_n_epochs", type=float, default=1, 
+                            help="Save checkpoint every N epochs")
+    
+    # Other arguments
+    train_parser.add_argument("--max_concurrent_runs", type=int, default=10, 
+                            help="Maximum concurrent workflow executions")
+    train_parser.add_argument("--llm_eval_model", type=str, default="gpt-4o-mini", 
+                            help="LLM model for evaluation")
+    train_parser.add_argument("--model_dir", type=str, default="model-weights", 
+                            help="Directory for model weights")
+    train_parser.add_argument("--temp_dir", type=str, default="temp", 
+                            help="Directory for temporary files")
+    train_parser.add_argument("--seed", type=int, default=42, 
+                            help="Random seed")
+    train_parser.add_argument("--use_wandb", action='store_true', 
+                            help="Enable Weights & Biases logging")
+    train_parser.add_argument("--wandb_project", type=str, default="PASS", 
+                            help="W&B project name")
+    train_parser.add_argument("--wandb_entity", type=str, default=None, 
+                            help="W&B entity name")
+    train_parser.add_argument("--wandb_run_name", type=str, default=None, 
+                            help="W&B run name")
+    train_parser.add_argument("--log_every_n_batches", type=int, default=1, 
+                            help="Log metrics every N batches")
+    
+    #Evaluate subcommand
+    eval_parser = subparsers.add_parser('evaluate', help='Evaluate the agent')
+    
+    # Required arguments
+    eval_parser.add_argument("--checkpoint", "-c", type=str, required=True,
+                           help="Path to the controller checkpoint file (.pth)")
+    
+    # Data arguments
+    eval_parser.add_argument("--data_root", type=str, default="data", 
+                           help="Root directory of the dataset")
+    eval_parser.add_argument("--eval_split", type=str, default="new_validate.json", 
+                           help="Evaluation set filename")
+    eval_parser.add_argument("--output_dir", type=str, default="./outputs/eval_agent", 
+                           help="Output directory")
+    eval_parser.add_argument("--max_samples", type=int, default=None, 
+                           help="Maximum number of samples to evaluate (for testing)")
+    
+    # Controller arguments
+    eval_parser.add_argument("--controller_hidden_dim", type=int, default=32, 
+                           help="Controller hidden layer dimension")
+    eval_parser.add_argument("--controller_num_layers", type=int, default=4, 
+                           help="Number of controller layers")
+    eval_parser.add_argument("--encoder_model", type=str, 
+                           default="sentence-transformers/all-MiniLM-L6-v2",
+                           help="Sentence encoder model")
+    
+    # Device arguments
+    eval_parser.add_argument("--device", type=str, default="cuda", 
+                           help="Evaluation device (cuda or cpu)")
+    eval_parser.add_argument("--gpu_ids", type=str, default=None, 
+                           help="GPU IDs to use, comma-separated")
+    eval_parser.add_argument("--distributed_tools", action='store_true', 
+                           help="Distribute tools to different GPUs")
+    eval_parser.add_argument("--offload_large_tools", action='store_true', 
+                           help="Offload large tools to other GPUs")
+    eval_parser.add_argument("--large_tool_threshold", type=float, default=4.0, 
+                           help="VRAM threshold (GB) for large tools")
+    
+    # Logging arguments
+    eval_parser.add_argument("--log_tools", action='store_true', 
+                           help="Log tool executions")
+    eval_parser.add_argument("--log_dir", type=str, default="logs/agent_eval", 
+                           help="Directory for logs")
+    eval_parser.add_argument("--max_concurrent_runs", type=int, default=10, 
+                           help="Maximum concurrent workflow executions")
+    eval_parser.add_argument("--llm_eval_model", type=str, default="gpt-4o-mini", 
+                           help="LLM model for evaluation")
+    
+    # Other arguments
+    eval_parser.add_argument("--model_dir", type=str, default="model-weights", 
+                           help="Directory for model weights")
+    eval_parser.add_argument("--temp_dir", type=str, default="temp", 
+                           help="Directory for temporary files")
+    
+    # Parse arguments
+    args = parser.parse_args()
+    
+    if args.command is None:
+        parser.print_help()
+        sys.exit(1)
+    
+    if args.command == 'train':
+        print("Starting training...")
+        from train_agent import main as train_main
+        
+        sys.argv = ['train_agent.py']
+        for key, value in vars(args).items():
+            if key == 'command':
+                continue
+            if isinstance(value, bool):
+                if value:
+                    sys.argv.append(f'--{key}')
+            elif value is not None:
+                sys.argv.extend([f'--{key}', str(value)])
+        
+        asyncio.run(train_main())
+        
+    elif args.command == 'evaluate':
+        print("Starting evaluation...")
+        from evaluate_agent import main as eval_main
+        
+        sys.argv = ['evaluate_agent.py']
+        for key, value in vars(args).items():
+            if key == 'command':
+                continue
+            if isinstance(value, bool):
+                if value:
+                    sys.argv.append(f'--{key}')
+            elif value is not None:
+                sys.argv.extend([f'--{key}', str(value)])
+        
+        asyncio.run(eval_main())
 
-    # start
-    demo.launch(server_name="0.0.0.0", server_port=8585, share=True)
-
-
-
-
-
-
-# import os
-# import warnings
-# from typing import *
-# from dotenv import load_dotenv
-# from transformers import logging
-
-# from langgraph.checkpoint.memory import MemorySaver
-# from langchain_openai import ChatOpenAI
-# from langgraph.checkpoint.memory import MemorySaver
-# from langchain_openai import ChatOpenAI
-
-# from interface import create_demo
-# from medrax.agent import *
-# from medrax.tools import *
-# from medrax.utils import *
-
-# warnings.filterwarnings("ignore")
-# logging.set_verbosity_error()
-# _ = load_dotenv()
-
-
-# def initialize_agent(
-#     prompt_file,
-#     tools_to_use=None,
-#     model_dir="/model-weights",
-#     temp_dir="temp",
-#     device="cuda",
-#     model="chatgpt-4o-latest",
-#     temperature=0.7,
-#     top_p=0.95,
-#     openai_kwargs={}
-# ):
-#     """Initialize the MedRAX agent with specified tools and configuration.
-
-#     Args:
-#         prompt_file (str): Path to file containing system prompts
-#         tools_to_use (List[str], optional): List of tool names to initialize. If None, all tools are initialized.
-#         model_dir (str, optional): Directory containing model weights. Defaults to "/model-weights".
-#         temp_dir (str, optional): Directory for temporary files. Defaults to "temp".
-#         device (str, optional): Device to run models on. Defaults to "cuda".
-#         model (str, optional): Model to use. Defaults to "chatgpt-4o-latest".
-#         temperature (float, optional): Temperature for the model. Defaults to 0.7.
-#         top_p (float, optional): Top P for the model. Defaults to 0.95.
-#         openai_kwargs (dict, optional): Additional keyword arguments for OpenAI API, such as API key and base URL.
-
-#     Returns:
-#         Tuple[Agent, Dict[str, BaseTool]]: Initialized agent and dictionary of tool instances
-#     """
-#     prompts = load_prompts_from_file(prompt_file)
-#     prompt = prompts["MEDICAL_ASSISTANT"]
-
-#     all_tools = {
-#         "ChestXRayClassifierTool": lambda: ChestXRayClassifierTool(device=device),
-#         "ChestXRaySegmentationTool": lambda: ChestXRaySegmentationTool(device=device),
-#         "LlavaMedTool": lambda: LlavaMedTool(cache_dir=model_dir, device=device, load_in_8bit=True),
-#         "XRayVQATool": lambda: XRayVQATool(cache_dir=model_dir, device=device),
-#         "ChestXRayReportGeneratorTool": lambda: ChestXRayReportGeneratorTool(
-#             cache_dir=model_dir, device=device
-#         ),
-#         "XRayPhraseGroundingTool": lambda: XRayPhraseGroundingTool(
-#             cache_dir=model_dir, temp_dir=temp_dir, load_in_8bit=True, device=device
-#         ),
-#         "ChestXRayGeneratorTool": lambda: ChestXRayGeneratorTool(
-#             model_path=f"{model_dir}/roentgen", temp_dir=temp_dir, device=device
-#         ),
-#         "ImageVisualizerTool": lambda: ImageVisualizerTool(),
-#         "DicomProcessorTool": lambda: DicomProcessorTool(temp_dir=temp_dir),
-#     }
-
-#     # Initialize only selected tools or all if none specified
-#     tools_dict = {}
-#     tools_to_use = tools_to_use or all_tools.keys()
-#     for tool_name in tools_to_use:
-#         if tool_name in all_tools:
-#             tools_dict[tool_name] = all_tools[tool_name]()
-
-#     checkpointer = MemorySaver()
-#     model = ChatOpenAI(model=model, temperature=temperature, top_p=top_p, **openai_kwargs)
-#     agent = Agent(
-#         model,
-#         tools=list(tools_dict.values()),
-#         log_tools=True,
-#         log_dir="logs",
-#         system_prompt=prompt,
-#         checkpointer=checkpointer,
-#     )
-
-#     print("Agent initialized")
-#     return agent, tools_dict
-
-
-# if __name__ == "__main__":
-#     """
-#     This is the main entry point for the MedRAX application.
-#     It initializes the agent with the selected tools and creates the demo.
-#     """
-#     print("Starting server...")
-
-#     # Example: initialize with only specific tools
-#     # Here three tools are commented out, you can uncomment them to use them
-#     selected_tools = [
-#         "ImageVisualizerTool",
-#         "DicomProcessorTool",
-#         "ChestXRayClassifierTool",
-#         "ChestXRaySegmentationTool",
-#         "ChestXRayReportGeneratorTool",
-#         "XRayVQATool",
-#         # "LlavaMedTool",
-#         # "XRayPhraseGroundingTool",
-#         # "ChestXRayGeneratorTool",
-#     ]
-
-#     # Collect the ENV variables
-#     openai_kwargs = {}
-#     if api_key := os.getenv("OPENAI_API_KEY"):
-#         openai_kwargs["api_key"] = api_key
-
-#     if base_url := os.getenv("OPENAI_BASE_URL"):
-#         openai_kwargs["base_url"] = base_url
-
-#     agent, tools_dict = initialize_agent(
-#         "medrax/docs/system_prompts.txt",
-#         tools_to_use=selected_tools,
-#         model_dir="/model-weights",  # Change this to the path of the model weights
-#         temp_dir="temp",  # Change this to the path of the temporary directory
-#         device="cuda",  # Change this to the device you want to use
-#         model="gpt-4o",  # Change this to the model you want to use, e.g. gpt-4o-mini
-#         temperature=0.7,
-#         top_p=0.95,
-#         openai_kwargs=openai_kwargs
-#     )
-#     demo = create_demo(agent, tools_dict)
-
-#     demo.launch(server_name="0.0.0.0", server_port=8585, share=True)
+if __name__ == "__main__":
+    main()

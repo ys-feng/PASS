@@ -3,7 +3,7 @@ from sentence_transformers import SentenceTransformer
 from typing import List, Dict, Any, Optional, Union
 import numpy as np
 import re # For VQA answer cleaning
-from medrax.maas.operators import get_operator_cost_models, calculate_dynamic_cost
+from core.agent_operators import get_operator_cost_models, calculate_dynamic_cost
 
 def get_sentence_embedding(sentence: str) -> torch.Tensor:
     """

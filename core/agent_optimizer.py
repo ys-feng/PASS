@@ -8,12 +8,12 @@ from datetime import datetime
 from pathlib import Path
 
 # Import calculate_score and calculate_cost
-from .utils import calculate_score, calculate_cost 
+from .agent_utils import calculate_score, calculate_cost 
 
 logger = logging.getLogger(__name__)
 
-class MaaSOptimizer:
-    """MaaS optimizer for training the controller network."""
+class AgentOptimizer:
+    """Agent optimizer for training the controller network."""
     
     def __init__(
         self,
@@ -29,7 +29,7 @@ class MaaSOptimizer:
         lr_decay_every_n_batches: int = 10
     ):
         """
-        Initializes the MaaSOptimizer.
+        Initializes the AgentOptimizer.
         
         Args:
             controller: The controller network.
@@ -72,7 +72,7 @@ class MaaSOptimizer:
             "utilities": [] # Add utility record
         }
         
-        logger.info(f"MaaSOptimizer initialized, learning_rate: {learning_rate}, batch_size: {batch_size}, cost_weight: {cost_weight}")
+        logger.info(f"AgentOptimizer initialized, learning_rate: {learning_rate}, batch_size: {batch_size}, cost_weight: {cost_weight}")
 
     def adjust_learning_rate_if_needed(self, current_batch_count):
         """Adjusts the learning rate if needed based on the current batch count."""
@@ -222,7 +222,7 @@ class MaaSOptimizer:
             logger.error(f"An error occurred while updating the controller: {str(e)}", exc_info=True)
             return None
         
-    def save_checkpoint(self, name: str = "medrax_maas_controller") -> str:
+    def save_checkpoint(self, name: str = "agent_controller") -> str:
         """
         Saves the controller parameters.
         

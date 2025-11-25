@@ -12,9 +12,9 @@ import numpy as np
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.messages import AnyMessage, SystemMessage, ToolMessage
 
-from .controller import MultiLayerController, SentenceEncoder
-from .operators import build_operator_mapping, get_operator_descriptions
-from .utils import get_operator_embeddings
+from .agent_controller import MultiLayerController, SentenceEncoder
+from .agent_operators import build_operator_mapping, get_operator_descriptions
+from .agent_utils import get_operator_embeddings
 
 logger = logging.getLogger(__name__)
 
@@ -43,19 +43,19 @@ class CustomJSONEncoder(json.JSONEncoder):
         # Let the parent class handle other types or raise a TypeError.
         return super(CustomJSONEncoder, self).default(obj)
 
-class MaaSWorkflow:
-    """MaAS workflow execution engine, supports multi-layer operator execution."""
+class AgentWorkflow:
+    """Agent workflow execution engine, supports multi-layer operator execution."""
     
     def __init__(
         self, 
         tools_dict: Dict[str, Any], 
         controller: Optional[MultiLayerController] = None,
         log_tools: bool = True,
-        log_dir: str = "logs/maas_executions",
+        log_dir: str = "logs/agent_executions",
         device=None
     ):
         """
-        Initializes the MaAS workflow execution engine.
+        Initializes the Agent workflow execution engine.
         
         Args:
             tools_dict: A dictionary of tools, where keys are tool names and values are tool instances.
@@ -114,7 +114,7 @@ class MaaSWorkflow:
         Returns:
             dict: A dictionary containing the complete execution result.
         """
-        logger.info(f"🎯 MaaSWorkflow starting to process query: {query[:50]}...")
+        logger.info(f"🎯 AgentWorkflow starting to process query: {query[:50]}...")
         logger.info(f"📁 Image path: {image_path}")
         
         if hasattr(self, 'controller') and self.controller:

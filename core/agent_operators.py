@@ -439,7 +439,6 @@ def get_operator_cost_models() -> dict:
     # 1k tokens on a 7B LLM (baseline) @ 2PT = 2 * 7B * 1k = 14 TFLOPs => 14 CU
     
     cost_models = {
-        # --- Fixed-cost tools (FLOPs-based) ---
         'ChestXRayClassify': {
             'type': 'fixed',
             'cost_cu': 0.0076,  # DenseNet-121 ~7.6 GFLOPs.
@@ -456,7 +455,6 @@ def get_operator_cost_models() -> dict:
             'description': 'Low CPU/IO cost'
         },
 
-        # --- Dynamic-cost tools (Token-based) ---
         # Based on the 2*P*T formula
         'LlaVAMed': {
             'type': 'tokens',
@@ -474,7 +472,6 @@ def get_operator_cost_models() -> dict:
             'description': 'Based on 2 * ~3B model parameters * tokens'
         },
 
-        # --- Hybrid-cost tools ---
         'ChestXRayReport': {
             'type': 'hybrid',
             'fixed_cost_cu': 0.017, # ViT Encoder part cost is unchanged
@@ -489,7 +486,6 @@ def get_operator_cost_models() -> dict:
             'description': 'Based on Stable Diffusion UNet FLOPs per step'
         },
         
-        # --- Special operators ---
         'EarlyStop': {
             'type': 'fixed',
             'cost_cu': 0.0, # No computational cost

@@ -163,7 +163,6 @@ class XRayVQATool(BaseTool):
             Tuple[Dict[str, Any], Dict]: Output dictionary and metadata dictionary
         """
         try:
-            # DJY modify: if image_paths is a single string, convert it to a list
             if isinstance(image_paths, str):
                 image_paths = [image_paths]
             # Verify image paths
