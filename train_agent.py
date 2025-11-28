@@ -94,8 +94,8 @@ def setup_args():
     parser = argparse.ArgumentParser(description="Train the Agent controller.")
     
     parser.add_argument("--data_root", type=str, default="data", help="Root directory of the dataset.")
-    parser.add_argument("--train_split", type=str, default="new_train.json", help="Training set filename.")
-    parser.add_argument("--val_split", type=str, default="new_validate.json", help="Validation set filename.")
+    parser.add_argument("--train_split", type=str, default="", help="Training set filename.")
+    parser.add_argument("--val_split", type=str, default="", help="Validation set filename.")
     parser.add_argument("--output_dir", type=str, default="./outputs/train_agent", help="Output directory.")
 
     parser.add_argument("--cpr_epochs", type=int, default=2, help="Number of epochs for Contrastive Path Ranking (CPR).")
@@ -129,7 +129,7 @@ def setup_args():
     parser.add_argument("--eval_every_n_epochs", type=int, default=1, help="Evaluate every N epochs.")
     parser.add_argument("--save_every_n_epochs", type=float, default=1, help="Save a checkpoint every N epochs.")
     parser.add_argument("--use_wandb", action='store_true', help="Enable Weights & Biases logging.")
-    parser.add_argument("--wandb_project", type=str, default="EVA", help="Wandb project name.")
+    parser.add_argument("--wandb_project", type=str, default="", help="Wandb project name.")
     parser.add_argument("--wandb_entity", type=str, default=None, help="Wandb entity name (optional).")
     parser.add_argument("--wandb_run_name", type=str, default=None, help="Wandb run name (optional).")
     parser.add_argument("--log_every_n_batches", type=int, default=1, help="Log training metrics every N batches.")
