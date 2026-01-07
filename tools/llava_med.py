@@ -12,10 +12,10 @@ from langchain_core.tools import BaseTool
 from PIL import Image
 
 
-from medrax.llava.conversation import conv_templates
-from medrax.llava.model.builder import load_pretrained_model
-from medrax.llava.mm_utils import tokenizer_image_token, process_images
-from medrax.llava.constants import (
+from llava.conversation import conv_templates
+from llava.model.builder import load_pretrained_model
+from llava.mm_utils import tokenizer_image_token, process_images
+from llava.constants import (
     IMAGE_TOKEN_INDEX,
     DEFAULT_IMAGE_TOKEN,
     DEFAULT_IM_START_TOKEN,

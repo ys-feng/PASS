@@ -94,8 +94,8 @@ def setup_args():
     parser = argparse.ArgumentParser(description="Train the Agent controller.")
     
     parser.add_argument("--data_root", type=str, default="data", help="Root directory of the dataset.")
-    parser.add_argument("--train_split", type=str, default="", help="Training set filename.")
-    parser.add_argument("--val_split", type=str, default="", help="Validation set filename.")
+    parser.add_argument("--train_split", type=str, default="CAB-E/train.json", help="Training set filename.")
+    parser.add_argument("--val_split", type=str, default="CAB-E/test.json", help="Validation set filename.")
     parser.add_argument("--output_dir", type=str, default="./outputs/train_agent", help="Output directory.")
 
     parser.add_argument("--cpr_epochs", type=int, default=2, help="Number of epochs for Contrastive Path Ranking (CPR).")

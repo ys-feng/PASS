@@ -9,7 +9,7 @@ from pathlib import Path
 
 def main():
     parser = argparse.ArgumentParser(
-        description="PASS - Progressive Agent System",
+        description="PASS",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -31,9 +31,9 @@ Examples:
     # Data arguments
     train_parser.add_argument("--data_root", type=str, default="data", 
                             help="Root directory of the dataset")
-    train_parser.add_argument("--train_split", type=str, default="new_train.json", 
+    train_parser.add_argument("--train_split", type=str, default="CAB-E/train.json", 
                             help="Training set filename")
-    train_parser.add_argument("--val_split", type=str, default="new_validate.json", 
+    train_parser.add_argument("--val_split", type=str, default="CAB-E/test.json", 
                             help="Validation set filename")
     train_parser.add_argument("--output_dir", type=str, default="./outputs/train_agent", 
                             help="Output directory")
@@ -129,7 +129,7 @@ Examples:
     # Data arguments
     eval_parser.add_argument("--data_root", type=str, default="data", 
                            help="Root directory of the dataset")
-    eval_parser.add_argument("--eval_split", type=str, default="new_validate.json", 
+    eval_parser.add_argument("--eval_split", type=str, default="CAB-E/test.json", 
                            help="Evaluation set filename")
     eval_parser.add_argument("--output_dir", type=str, default="./outputs/eval_agent", 
                            help="Output directory")

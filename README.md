@@ -1,194 +1,113 @@
-# PASS
+<div align="center">
 
-## Environment Setup
+# 🏥 PASS: Probabilistic Agentic Supernet Sampling for Interpretable and Adaptive Chest X-Ray Reasoning
 
-### Prerequisites
+[![Paper](https://img.shields.io/badge/Paper-arXiv-b31b1b.svg)](https://arxiv.org/abs/2508.10501)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB.svg)](https://www.python.org/)
 
-- CUDA-capable GPU (recommended for model training and inference)
-- Python 3.10
+[**Paper**](https://arxiv.org/abs/2508.10501) | [**Code**](https://github.com/ys-feng/PASS)
 
-### Installation Steps
+</div>
 
-1. **Clone the repository:**
+---
+
+## Overview
+
+**PASS** (Probabilistic Agentic Supernet Sampling) is a multimodal agentic framework for Chest X-Ray (CXR) reasoning. The framework features:
+
+- **Adaptive Multimodal Tool Selection**: Task-conditioned policy network for dynamic tool orchestration
+- **Interpretable Agentic Workflows**: Probability-annotated reasoning paths for clinical transparency and trustworthiness
+- **Efficiency-Aware Learning**: Cost-sensitive training with dynamic early exit
+- **Three-Stage Training**: Expert knowledged guided warm-up → Contrastive path-ranking → Cost-aware RL
+
+---
+
+## Framework
+
+<div align="center">
+  <img src="assets/Framework.png" alt="PASS Framework" width="90%">
+  <p><em>The PASS framework.</em></p>
+</div>
+
+PASS employs a **probabilistic controller** to sample actions from an **agentic supernet** (DAG of medical agents), generating workflows with **interpretable probabilities** for clinical safety. Tool outputs are aggregated into **personalized memory** to inform subsequent steps. Trained via a three-stage strategy, PASS enables **interpretable, adaptive, and efficient** multimodal CXR reasoning.
+
+---
+
+## Installation
+
 ```bash
-git clone https://github.com/ys-feng/PASS-clean.git
-cd PASS-clean
-```
-
-2. **Create conda environment from the provided yml file:**
-```bash
+# Create environment
 conda env create -f environment.yml
+conda activate pass
 ```
 
-3. **Activate the environment:**
-```bash
-conda activate medrax
-```
+---
 
-4. **Verify installation:**
-```bash
-python -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}')"
-```
+## Data
 
-5. **Set up environment variables:**
+We provide three benchmarks for evaluation:
 
-Create a `.env` file in the project root or set the following environment variables:
+### CAB-E (Ours)
 
-```bash
-export OPENAI_API_KEY="your-openai-api-key"
-export OPENAI_BASE_URL="https://api.openai.com/v1"  # Optional, if using a proxy
-```
+**CAB-E** (ChestAgentBench-E) is our proposed benchmark for multi-step, safety-critical, free-form CXR reasoning.
 
-For proxy support (if needed):
-```bash
-export ALL_PROXY="socks5://username:password@host:port"
-```
+### CAB-Standard
 
-6. **Download model weights (if needed):**
+Constructed using the **ChestAgentBench (CAB)** methodology introduced in MedRAX and adapted to the SLAKE dataset.
 
-Place model weights in the `model-weights/` directory. The system will automatically download required models on first use.
+- MedRAX paper (CAB method): [arXiv:2502.02673](https://arxiv.org/html/2502.02673v1)
+- CAB generation script: [MedRAX/benchmark](https://github.com/bowang-lab/MedRAX/blob/main/benchmark/create_benchmark.py)
 
-### Environment Details
+### SLAKE
 
-For a complete list of dependencies, see `environment.yml`.
+The benchmarks are built upon the SLAKE dataset. Please download images from the [official site](https://www.med-vqa.com/slake/) and place them in `data/Slake1.0/`.
 
-## Quick Start
+---
 
-### View Help
+## Usage
 
 ```bash
-python main.py --help
-python main.py train --help
-python main.py evaluate --help
-```
-
-### Training
-
-**Basic Training:**
-```bash
+# Training
 python main.py train
+
+# Evaluation  
+python main.py evaluate --checkpoint <path_to_checkpoint>
+
+# See all options
+python main.py --help
 ```
 
-**Custom Training Parameters:**
-```bash
-python main.py train \
-  --data_root data \
-  --train_split new_train.json \
-  --val_split new_validate.json \
-  --epochs 5 \
-  --batch_size 32 \
-  --learning_rate 1e-4 \
-  --output_dir ./outputs/my_training
+---
+
+## Citation
+
+If you find this work useful, please cite:
+
+```bibtex
+@misc{feng2025pass,
+      title={PASS: Probabilistic Agentic Supernet Sampling for Interpretable and Adaptive Chest X-Ray Reasoning}, 
+      author={Yushi Feng and Junye Du and Yingying Hong and Qifan Wang and Lequan Yu},
+      year={2025},
+      eprint={2508.10501},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2508.10501}, 
+}
 ```
 
-**Multi-GPU Training:**
-```bash
-python main.py train \
-  --use_multi_gpu \
-  --gpu_ids 0,1,2,3 \
-  --distributed_tools
-```
+---
 
-**Using Weights & Biases:**
-```bash
-python main.py train \
-  --use_wandb \
-  --wandb_project PASS \
-  --wandb_run_name my_experiment
-```
+## Acknowledgement
 
+We thank the [SLAKE](https://www.med-vqa.com/slake/) dataset creators for their contributions.
 
-### Evaluation
+We also thank to the following repositories for their invaluable code and insights:
 
-**Basic Evaluation:**
-```bash
-python main.py evaluate \
-  --checkpoint /path/to/checkpoint.pth
-```
+Our benchmark design is partially adapted from [MedRAX](https://github.com/bowang-lab/MedRAX). Our agentic framework and tool implementations are partially adapted from [MaAS](https://github.com/bingreeky/MaAS).
 
-**Full Evaluation:**
-```bash
-python main.py evaluate \
-  --checkpoint outputs/best_model.pth \
-  --data_root data \
-  --eval_split test.json \
-  --output_dir ./outputs/my_evaluation
-```
+---
 
-**Quick Test (Limited Samples):**
-```bash
-python main.py evaluate \
-  --checkpoint outputs/model.pth \
-  --max_samples 50
-```
+## License
 
-**Multi-GPU Evaluation:**
-```bash
-python main.py evaluate \
-  --checkpoint outputs/model.pth \
-  --gpu_ids 0,1 \
-  --distributed_tools
-```
-
-## Common Parameters
-
-### Training Parameters
-
-- `--data_root`: Dataset root directory (default: `data`)
-- `--train_split`: Training set filename (default: `new_train.json`)
-- `--val_split`: Validation set filename (default: `new_validate.json`)
-- `--output_dir`: Output directory (default: `./outputs/train_agent`)
-- `--epochs`: Number of training epochs (default: `1`)
-- `--batch_size`: Batch size (default: `48`)
-- `--learning_rate`: Learning rate (default: `5e-5`)
-- `--warmup_epochs`: Warmup epochs (default: `3`)
-- `--disable_warmup`: Disable warmup phase
-- `--use_multi_gpu`: Use multi-GPU training
-- `--gpu_ids`: GPU IDs to use, comma-separated
-- `--use_wandb`: Enable W&B logging
-
-### Evaluation Parameters
-
-- `--checkpoint`, `-c`: Checkpoint file path (**required**)
-- `--data_root`: Dataset root directory (default: `data`)
-- `--eval_split`: Evaluation set filename (default: `new_validate.json`)
-- `--output_dir`: Output directory (default: `./outputs/eval_agent`)
-- `--max_samples`: Maximum number of evaluation samples (for quick testing)
-- `--gpu_ids`: GPU IDs to use
-- `--distributed_tools`: Distribute tools to different GPUs
-
-## Output Files
-
-### Training Output
-
-- `controller_epoch_N.pth`: Model checkpoint for each epoch
-- `best_controller_epoch_N_score_X.pth`: Best model checkpoint
-- `controller_epoch_N_history.json`: Training history
-
-### Evaluation Output
-
-- `evaluation_results_TIMESTAMP.json`: Detailed evaluation results
-- `evaluation_summary_TIMESTAMP.csv`: Evaluation results CSV summary
-
-## Project Structure
-
-```
-PASS-clean/
-├── core/                       # Core agent components
-│   ├── agent_controller.py     # Neural controller
-│   ├── agent_workflow.py       # Workflow engine
-│   ├── agent_optimizer.py      # Training optimizer
-│   ├── agent_operators.py      # Operator management
-│   └── agent_utils.py          # Utility functions
-├── tools/                      # Medical imaging tools
-│   ├── classification.py       # X-ray classification
-│   ├── segmentation.py         # Image segmentation
-│   ├── report_generation.py   # Report generation
-│   ├── xray_vqa.py            # Visual Q&A
-│   └── llava_med.py           # LLaVA-Med integration
-├── main.py                     # Main entry point
-├── train_agent.py             # Training script
-├── evaluate_agent.py          # Evaluation script
-├── environment.yml            # Conda environment
-└── README.md                  # This file
-```
+This project is licensed under the MIT License - see [LICENSE](LICENSE) for details.

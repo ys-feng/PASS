@@ -62,7 +62,6 @@ class ChestXRayReportGeneratorTool(BaseTool):
         super().__init__()
         self.device = torch.device(device) if device else "cuda"
 
-        # Initialize findings model
         self.findings_model = VisionEncoderDecoderModel.from_pretrained(
             "IAMJB/chexpert-mimic-cxr-findings-baseline", cache_dir=cache_dir
         ).eval()
@@ -73,7 +72,6 @@ class ChestXRayReportGeneratorTool(BaseTool):
             "IAMJB/chexpert-mimic-cxr-findings-baseline", cache_dir=cache_dir
         )
 
-        # Initialize impression model
         self.impression_model = VisionEncoderDecoderModel.from_pretrained(
             "IAMJB/chexpert-mimic-cxr-impression-baseline", cache_dir=cache_dir
         ).eval()
@@ -84,11 +82,9 @@ class ChestXRayReportGeneratorTool(BaseTool):
             "IAMJB/chexpert-mimic-cxr-impression-baseline", cache_dir=cache_dir
         )
 
-        # Move models to device
         self.findings_model = self.findings_model.to(self.device)
         self.impression_model = self.impression_model.to(self.device)
 
-        # Default generation arguments
         self.generation_args = {
             "num_return_sequences": 1,
             "max_length": 128,
@@ -169,7 +165,6 @@ class ChestXRayReportGeneratorTool(BaseTool):
             Tuple[str, Dict]: A tuple containing the complete report and metadata.
         """
         try:
-            # Process image for both models
             findings_pixels = self._process_image(
                 image_path, self.findings_processor, self.findings_model
             )
@@ -177,7 +172,6 @@ class ChestXRayReportGeneratorTool(BaseTool):
                 image_path, self.impression_processor, self.impression_model
             )
 
-            # Generate both sections
             with torch.inference_mode():
                 findings_text = self._generate_report_section(
                     findings_pixels, self.findings_model, self.findings_tokenizer
@@ -186,7 +180,6 @@ class ChestXRayReportGeneratorTool(BaseTool):
                     impression_pixels, self.impression_model, self.impression_tokenizer
                 )
 
-            # Combine into formatted report
             report = (
                 "CHEST X-RAY REPORT\n\n"
                 f"FINDINGS:\n{findings_text}\n\n"

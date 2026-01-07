@@ -35,6 +35,12 @@ logs/
 temp/
 wandb/
 
+# Large datasets (download separately)
+data/Slake1.0/
+
+# Scripts (internal utilities)
+scripts/
+
 # Jupyter
 .ipynb_checkpoints/
 

@@ -38,7 +38,7 @@ def setup_args():
     parser = argparse.ArgumentParser(description="Evaluate the Agent controller.")
     
     parser.add_argument("--data_root", type=str, default="data", help="Root directory of the dataset.")
-    parser.add_argument("--eval_split", type=str, default="", help="Evaluation set filename.")
+    parser.add_argument("--eval_split", type=str, default="CAB-E/test.json", help="Evaluation set filename.")
     parser.add_argument("--output_dir", type=str, default="./outputs/eval_agent", help="Output directory.")
     parser.add_argument("--checkpoint", type=str, default="", help="Path to the controller checkpoint file (.pth).")
     
